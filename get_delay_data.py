@@ -53,7 +53,7 @@ def pltStock(code, type, data_time, title_desc, quote_source):
     type_map = ['三秒快照', '逐笔委托', '逐笔成交']
     file_path = get_file_path(data_time, code, type, quote_source)
     df3 = readData(file_path, checked_date, time_interval)
-    df3.to_csv('ddd3.csv')
+    # df3.to_csv('ddd3.csv')
     type = int(type) - 1
 
     # 下面都是绘图操作

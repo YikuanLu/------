@@ -89,7 +89,7 @@ def pltStock(code, type, data_time, title_desc):
     df3 = readData(file3)
     # df1.to_csv('df1.csv')
     # df2.to_csv('df2.csv')
-    df3.to_csv('df3.csv')
+    # df3.to_csv('./out/df3.csv')
     type = int(type) - 1
     # 下面都是绘图操作
     max_delay_time, how_long, max_rate = title_desc

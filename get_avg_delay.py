@@ -4,10 +4,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import time
+import matplotlib.dates as mdates  # 處理日期
 from dateutil import parser
+from datetime import datetime
+from brokenaxes import brokenaxes
 import numpy as np
 
-from get_delay_data import readData
+from utils import readData
 
 
 checked_date = '20220615'
@@ -25,9 +28,10 @@ type_map = {
 def get_one_stock_date_range_avg(code):
     mdl_path = F'./data/tds/{checked_date}/{type_map["3"]}/{code}.csv'
     data = readData(mdl_path, checked_date, time_interval)
+    # data.to_csv(F'./out/{code}_raw.csv')
     data.reset_index(inplace=True)
     # print(data)
-    data.to_csv('data.csv')
+    # data.to_csv('data.csv')
     datetime_struct = parser.parse(checked_date)
     today = datetime_struct.strftime('%Y-%m-%d ')
     start = F'{today} {time_interval[0]}'
@@ -50,7 +54,8 @@ def get_one_stock_date_range_avg(code):
             break
         i_row = date_range_df.iloc[i]['timestamp']
         next_row = date_range_df.iloc[next_i]['timestamp']
-        df = data[(data['timef'] > i_row) & (data['timef'] <= next_row)]
+        df = data[(data['local_timef'] > i_row) &
+                  (data['local_timef'] <= next_row)]
         r_df = r_df.append(
             {'code': code, 'x_axis': date_range_df.iloc[i].date, 'rate_avg': df['rate'].mean()}, ignore_index=True)
     return r_df
@@ -74,9 +79,28 @@ def get_all_file():
     return list(filenames)
 
 
+# 生成均值
+def get_avg(stock_list):
+    df = pd.DataFrame()
+    for i, v in enumerate(stock_list):
+        check_data = get_one_stock_date_range_avg(v)
+        df = pd.concat([df, check_data])
+        print(F'生成{v}数据中...')
+    df = df.dropna()
+    # return df
+
+    group_obj = df.groupby('x_axis')
+    result_df = pd.DataFrame(columns=['time', 'rate_avg'])
+    for name, item in group_obj:
+        result_df = result_df.append(
+            {'time': name, 'rate_avg': item['rate_avg'].mean()}, ignore_index=True)
+    result_df.sort_values(by='time', inplace=True)
+    result_df.to_csv('./out/sh_avg.csv')
+    return result_df
+
+
 if __name__ == '__main__':
     filenames = get_all_file()
-    # print(filenames)
     sh_ls = []
     sz_ls = []
     el_ls = []
@@ -89,6 +113,21 @@ if __name__ == '__main__':
         else:
             el_ls.append(v)
 
-    for i, v in enumerate(sh_ls[0:4]):
-        check_data = get_one_stock_date_range_avg(v)
-        print(check_data)
+    sh_data = get_avg(sh_ls[0:4])
+    sh_data.to_csv('./out/sh_data.csv')
+    # sz_data = get_avg(sz_ls[0:4])
+
+    bax = brokenaxes(xlims=((datetime(2022, 6, 15, 9, 00, 00), datetime(
+        2022, 6, 15, 11, 30, 00)), (datetime(2022, 6, 15, 13, 00, 00), datetime(2022, 6, 15, 15, 00, 00))))
+
+    title = '整体平均延迟'
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    # fig = plt.figure()
+    plt.gca().xaxis.set_major_formatter(
+        mdates.DateFormatter('%H:%M:%S'))  # 設置x軸主刻度顯示格式（日期）
+    # ax = fig.add_subplot(1, 1, 1)
+    plt.title(title)
+    x = sh_data['time']
+    y = sh_data['rate_avg']
+    bax.plot(x, y)
+    plt.show()

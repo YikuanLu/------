@@ -38,18 +38,19 @@ def readData(filePath, check_date, period):
     # 给时间加上日期用于转时间戳
     datetime_struct = parser.parse(check_date)
     today = datetime_struct.strftime('%Y-%m-%d ')
-    df['x_axis'] = df['time']
+    df['x_axis'] = df['local_time']
     df['time'] = today + df['time']
     df['local_time'] = today + df['local_time']
 
     df['time_s'] = df['time'].apply(time_to_s_timestamp)
+    df['local_time_s'] = df['local_time'].apply(time_to_s_timestamp)
     df['timef'] = df['time'].apply(time_to_ms_timestamp)
     df['local_timef'] = df['local_time'].apply(time_to_ms_timestamp)
 
     start_timeStamp, end_timeStamp = get_effective_time(
         period, check_date)
-    df = df.loc[(df.time_s >= start_timeStamp) & (
-        df.time_s <= end_timeStamp)]
+    df = df.loc[(df.local_time_s >= start_timeStamp) & (
+        df.local_time_s <= end_timeStamp)]
 
     df['rate'] = (df['local_timef'] - df['timef']) / 1000
     return df
