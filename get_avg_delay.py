@@ -6,9 +6,11 @@ import os
 import time
 import matplotlib.dates as mdates  # 處理日期
 from dateutil import parser
-from datetime import datetime
 from brokenaxes import brokenaxes
 import numpy as np
+import plotly.graph_objects as go
+import plotly
+from tqdm import tqdm
 
 from utils import readData
 
@@ -82,10 +84,11 @@ def get_all_file():
 # 生成均值
 def get_avg(stock_list):
     df = pd.DataFrame()
+    data_len = len(stock_list)
     for i, v in enumerate(stock_list):
         check_data = get_one_stock_date_range_avg(v)
         df = pd.concat([df, check_data])
-        print(F'生成{v}数据中...')
+        print(F'生成{v}数据中,已完成{(i+1)}/{data_len}...')
     df = df.dropna()
     # return df
 
@@ -95,8 +98,35 @@ def get_avg(stock_list):
         result_df = result_df.append(
             {'time': name, 'rate_avg': item['rate_avg'].mean()}, ignore_index=True)
     result_df.sort_values(by='time', inplace=True)
-    result_df.to_csv('./out/sh_avg.csv')
+    # result_df.to_csv('./out/sh_avg.csv')
+    print('finsh!!!👏👏👏')
     return result_df
+
+
+def draw_avg(data, type):
+    layout = go.Layout(
+        title="avg  delay time ",
+        yaxis=dict(title='seconds'),
+        xaxis=dict(title='time')
+    )
+    fig = go.Figure(layout=layout)
+    fig.add_trace(go.Scatter(
+        name='rate_avg',
+        x=data['time'],
+        y=data['rate_avg'],
+        mode="lines"
+    ))
+
+    fig.update_xaxes(
+        rangeslider_visible=False,  # 如果不要下部的可以缩放的坐标轴，这里可以改成false
+        rangebreaks=[
+            # 去除掉 15：00 到隔天 9: 30 的时间戳
+            dict(pattern="hour", bounds=[15, 9.30]),
+            dict(pattern='hour', bounds=[11.52, 13])   # 去除掉11
+        ]
+    )
+
+    plotly.offline.plot(fig, filename=F'{type}_avg.html')
 
 
 if __name__ == '__main__':
@@ -113,21 +143,10 @@ if __name__ == '__main__':
         else:
             el_ls.append(v)
 
-    sh_data = get_avg(sh_ls[0:4])
-    sh_data.to_csv('./out/sh_data.csv')
-    # sz_data = get_avg(sz_ls[0:4])
+    print('生成上交所数据：')
+    sh_data = get_avg(sh_ls)
+    print('生成深交所数据：')
+    sz_data = get_avg(sz_ls)
 
-    bax = brokenaxes(xlims=((datetime(2022, 6, 15, 9, 00, 00), datetime(
-        2022, 6, 15, 11, 30, 00)), (datetime(2022, 6, 15, 13, 00, 00), datetime(2022, 6, 15, 15, 00, 00))))
-
-    title = '整体平均延迟'
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    # fig = plt.figure()
-    plt.gca().xaxis.set_major_formatter(
-        mdates.DateFormatter('%H:%M:%S'))  # 設置x軸主刻度顯示格式（日期）
-    # ax = fig.add_subplot(1, 1, 1)
-    plt.title(title)
-    x = sh_data['time']
-    y = sh_data['rate_avg']
-    bax.plot(x, y)
-    plt.show()
+    draw_avg(sh_data, 'sh')
+    draw_avg(sz_data, 'sz')
